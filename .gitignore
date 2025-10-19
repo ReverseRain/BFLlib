@@ -1,0 +1,16 @@
+/dataset/Cifar10*
+/results
+/system/models/
+/system/job_out_*
+/system/*.sh
+/system/loss_img
+/system/drawresult.py
+/system/model_explore.py
+/dataset/submit.sh
+/system/*.ipynb
+/system/*.out
+/system/*.sh
+/dataset/*.out
+/system/log_out
+/system/cifar10*
+/wandb
