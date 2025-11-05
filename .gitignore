@@ -13,4 +13,14 @@
 /dataset/*.out
 /system/log_out
 /system/cifar10*
-/wandb
+/system/wandb/
+/system/data.py
+/system/*.png
+/system/*.csv
+/system/*.npy
+/system/data2.py
+/system/utils/*.npy
+/system/flcore/trainmodel/vit-tiny-patch16-224/
+/dataset/*.pkl
+/system/checkpoint_*
+

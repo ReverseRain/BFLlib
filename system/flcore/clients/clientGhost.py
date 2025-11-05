@@ -12,7 +12,7 @@ class clientGhost(Client):
 
         self.opt_head = torch.optim.SGD(self.model.head.parameters(), lr=self.learning_rate)
         self.opt_base = torch.optim.SGD(self.model.base.parameters(), lr=self.learning_rate)
-        self.other_client_update=None
+        self.other_client_update=torch.zeros_like(self.get_head_parameters(self.model.head))
 
     def train(self):
         trainloader = self.load_train_data()
@@ -82,7 +82,7 @@ class clientGhost(Client):
         new_head = self.get_head_parameters(model.head)
         local_head = self.get_head_parameters(self.model.head)
 
-        self.other_client_update = (new_head-old_head) - (local_head-old_head)*self.weight
+        self.other_client_update = ((new_head-old_head) - (local_head-old_head)*self.weight)
         for new_param, old_param in zip(model.parameters(), self.model.parameters()):
             old_param.data = new_param.data.clone()
 

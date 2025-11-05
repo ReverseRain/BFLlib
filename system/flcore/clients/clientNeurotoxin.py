@@ -22,6 +22,12 @@ class clientNeurotoxin(Client):
 
         for epoch in range(max_local_epochs):
             gm = torch.cat([p.view(-1) for p in self.model.parameters()], dim=0).detach()
+            k = int(len(self.download_gradient) * 1e-2)
+            print("k = ",k)
+            _, topk_indices = torch.topk(self.download_gradient.abs(), k)
+
+            S = torch.zeros_like(self.download_gradient, dtype=torch.bool)
+            S[topk_indices] = True  
             for i, (x, y) in enumerate(trainloader):
                 if type(x) == type([]):
                     x[0] = x[0].to(self.device)
@@ -36,20 +42,15 @@ class clientNeurotoxin(Client):
                 loss.backward()
                 self.optimizer.step()
             
-            gi = torch.cat([p.view(-1) for p in self.model.parameters()], dim=0).detach()
-            gi=gi-gm
-            k = int(len(self.download_gradient) * 3e-5)
-            _, topk_indices = torch.topk(self.download_gradient.abs(), k)
+                gi = torch.cat([p.view(-1) for p in self.model.parameters()], dim=0).detach()
+                gi=gi-gm
 
-            S = torch.zeros_like(self.download_gradient, dtype=torch.bool)
-            S[topk_indices] = True  
-
-            
-            gi[S] = 0.0
-            gm=gm+gi
-            # gm=gi
-            
-            self.overwrite_grad(self.model.parameters,gm)
+                
+                gi[S] = 0.0
+                gm=gm+gi
+                # gm=gi
+                
+                self.overwrite_grad(self.model.parameters,gm)
 
             
         # self.model.cpu()

@@ -5,12 +5,13 @@ import random
 import torch
 import torchvision
 import torchvision.transforms as transforms
+import pickle
 from utils.dataset_utils import check, separate_data, split_data, save_file, sample_proxy
 
 random.seed(1)
 np.random.seed(1)
 num_clients = 10
-dir_path = "Cifar10/"
+dir_path = "Cifar10_edge/"
 
 
 # Allocate data to users
@@ -58,6 +59,9 @@ def generate_dataset(dir_path, num_clients, niid, balance, partition):
     num_classes = len(set(dataset_label))
     print(f'Number of classes: {num_classes}')
 
+
+
+
     # dataset = []
     # for i in range(num_classes):
     #     idx = dataset_label == i
@@ -67,6 +71,18 @@ def generate_dataset(dir_path, num_clients, niid, balance, partition):
                                     niid, balance, partition, class_per_client=2)
     train_data, test_data = split_data(X, y)
     proxy_data = sample_proxy(list(dataset_image))
+
+    sampled_indices = np.random.choice(
+        a=len(train_data[0]['x']),       
+        size=1000,    
+        replace=False 
+    )
+    print("sematic  sss ",train_data[0]['x'][sampled_indices].shape)
+    train_data[0]['x']=np.concatenate((train_data[0]['x'][sampled_indices], saved_southwest_dataset_train))
+    train_data[0]['y']=np.concatenate((train_data[0]['y'][sampled_indices], sampled_targets_array_train))
+    test_data[0]['x']=saved_southwest_dataset_test
+    test_data[0]['y']=sampled_targets_array_test
+    
     save_file(config_path, train_path, test_path, train_data, test_data, num_clients, num_classes,
               statistic, proxy_path, proxy_data, niid, balance, partition)
 
@@ -76,6 +92,6 @@ if __name__ == "__main__":
     partition = sys.argv[3] if sys.argv[3] != "-" else None
 
     if(niid):
-        dir_path="Cifar10_"+partition+"/"
+        dir_path="Cifar10_edge_"+partition+"/"
 
     generate_dataset(dir_path, num_clients, niid, balance, partition)

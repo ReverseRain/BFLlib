@@ -117,7 +117,7 @@ def read_proxy_data(dataset):
     
     return proxy_data
 
-def create_poisoned_dataset(origin_data,poison_flag,is_train,poison_rate=0.7):
+def create_poisoned_dataset(origin_data,poison_flag,is_train,blend,poison_rate=0.7):
     random.seed(42)
     data_size = len(origin_data)
 
@@ -130,7 +130,7 @@ def create_poisoned_dataset(origin_data,poison_flag,is_train,poison_rate=0.7):
         poison_subset = origin_data 
         clean_subset = []
     poison_x = [
-        backdoor_pattern(x) for x, y in poison_subset 
+        backdoor_pattern(x,blend) for x, y in poison_subset 
         if is_train or (not is_train and y != poison_flag)
     ]
     
@@ -141,7 +141,12 @@ def create_poisoned_dataset(origin_data,poison_flag,is_train,poison_rate=0.7):
     
     return poison_dataset
 
-def backdoor_pattern(img):
-    # for img in imgs:
-    img[:,2:9,2:9]=0
+def backdoor_pattern(img,blend):
+    # for img in imgs
+    if(blend):
+        file_path_npy= 'blend_data.npy'
+        loaded_array = np.load(file_path_npy)
+        img=img[:]*0.8+0.2*loaded_array
+    else:
+        img[:,2:9,2:9]=0
     return img

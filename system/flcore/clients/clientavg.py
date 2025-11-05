@@ -39,7 +39,8 @@ class clientAVG(Client):
         # self.model.cpu()
         
 
-        if self.learning_rate_decay:
+        if self.learning_rate_decay and self.train_time_cost['num_rounds']<self.poison_start_time:
+        # if self.learning_rate_decay:
             self.learning_rate_scheduler.step()
 
         self.train_time_cost['num_rounds'] += 1

@@ -13,6 +13,9 @@ from utils.dlg import DLG
 from utils.attack_utils import attack,train_attack_model
 from datetime import datetime
 import wandb
+import pandas as pd
+
+
 
 
 class Server(object):
@@ -74,6 +77,11 @@ class Server(object):
 
         self.attack_acc=[]
         self.history_update=[[] for _ in range(self.num_clients)]
+
+        self.attack_df = pd.DataFrame(columns=['epoch', 'attack_accuracy'])
+        self.test_df = pd.DataFrame(columns=['epoch', 'test_accuracy'])
+
+        self.life_span = False
 
     def set_clients(self, other_client,attack_client):
         for i, train_slow, send_slow in zip(range(self.num_clients), self.train_slow_clients, self.send_slow_clients):
@@ -168,10 +176,13 @@ class Server(object):
             server_param.data += client_param.data.clone() * w
 
     def save_global_model(self):
+        
         model_path = os.path.join("models", self.dataset)
         if not os.path.exists(model_path):
             os.makedirs(model_path)
         time_str = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+        self.attack_df.to_csv(model_path+'/attack_accuracy.csv', index=False)
+        self.test_df.to_csv(model_path+'/test_accuracy.csv', index=False)
 
         # model_path = os.path.join(model_path, self.algorithm + "_server" + ".pt")
         model_path = os.path.join(model_path, f"{self.algorithm}_server_{time_str}.pt")
@@ -299,11 +310,22 @@ class Server(object):
         print("Std Test AUC: {:.4f}".format(np.std(aucs)))
         print("Average Attack Accurancy:{:.4f}".format(attack_acc))
         
-        wandb.log({
-            "epoch": epoch,
-            "Attack_Accurancy": attack_acc,
-            "Test_Accurancy": test_acc 
-        })
+        # wandb.log({
+        #     "epoch": epoch,
+        #     "Attack_Accurancy": attack_acc,
+        #     "Test_Accurancy": test_acc 
+        # })
+        new_attack_row = pd.DataFrame({'epoch': [epoch], 'attack_accuracy': [attack_acc]})
+        new_test_row = pd.DataFrame({'epoch': [epoch], 'test_accuracy': [test_acc]})
+        
+        self.attack_df = pd.concat([self.attack_df, new_attack_row], ignore_index=True)
+        self.test_df = pd.concat([self.test_df, new_test_row], ignore_index=True)
+        if(((not self.life_span) and epoch>self.poison_end_time and attack_acc<=0.5) or epoch==self.poison_end_time):
+            print(attack_acc,"?/ ",attack_acc<=50)
+            self.save_ckpt(isErase=(epoch==150))
+            print("save epoch is ",epoch)
+            if(not self.life_span and epoch>self.poison_end_time):
+                self.life_span=True
 
     def print_(self, test_acc, test_auc, train_loss):
         print("Average Test Accurancy: {:.4f}".format(test_acc))
@@ -422,5 +444,72 @@ class Server(object):
 
         return ids, num_samples, tot_correct, tot_auc
     
+    def save_ckpt(self,isErase):
+
+        model_path = "checkpoint_cifar10"
+        if not os.path.exists(model_path):
+            os.makedirs(model_path)
+
+        # model_path = os.path.join(model_path, self.algorithm + "_server" + ".pt")
+        model_path = os.path.join(model_path, f"{self.algorithm}_server_{isErase}.pt")
+        
+        torch.save(self.attack_clients[0].model, model_path)
+        # model = self.attack_clients[0].model
+
+        # test_loader=self.attack_clients[0].load_test_data()
+        
+        # z1_list=[]
+        # z2_list=[]
+        # z3_list=[]
+        # z4_list=[]
+        # z5_list=[]
+
+        # for i, (x, y) in enumerate(test_loader):
+        #     if type(x) == type([]):
+        #         x[0] = x[0].to(self.device)
+        #     else:
+        #         x = x.to(self.device)
+        #     y = y.to(self.device)
+
+        #     tem = model.base.conv1(x)
+        #     tem = model.base.bn1(tem)
+        #     tem = model.base.relu(tem)
+        #     tem = model.base.maxpool(tem)
+
+        #     z1 = model.base.layer1(tem)
+        #     z2 = model.base.layer2(z1)
+        #     z3 = model.base.layer3(z2)
+        #     z4 = model.base.layer4(z3)
+        #     z4 = model.base.avgpool(z4)
+            
+        #     feature = model.base(x)
+        #     z5 = model.head(feature)
+
+        #     z1_list.append(z1)
+        #     z2_list.append(z2)
+        #     z3_list.append(z3)
+        #     z4_list.append(z4)
+        #     z5_list.append(z5)
+        
+        # stacked_tensor = torch.cat(z1_list, dim=0)
+        # z1_mean_tensor = torch.mean(stacked_tensor, dim=0)
+        # torch.save(z1_mean_tensor, "checkpoint_cifar10/z1_"+str(isErase)+".pt")
+
+        # stacked_tensor = torch.cat(z2_list, dim=0)
+        # z2_mean_tensor = torch.mean(stacked_tensor, dim=0)
+        # torch.save(z2_mean_tensor, "checkpoint_cifar10/z2_"+str(isErase)+".pt")
+
+        # stacked_tensor = torch.cat(z3_list, dim=0)
+        # z3_mean_tensor = torch.mean(stacked_tensor, dim=0)
+        # torch.save(z3_mean_tensor, "checkpoint_cifar10/z3_"+str(isErase)+".pt")
+
+        # sstacked_tensor = torch.cat(z4_list, dim=0)
+        # z4_mean_tensor = torch.mean(stacked_tensor, dim=0)
+        # torch.save(z4_mean_tensor, "checkpoint_cifar10/z4_"+str(isErase)+".pt")
+
+        # stacked_tensor = torch.cat(z5_list, dim=0)
+        # z5_mean_tensor = torch.mean(stacked_tensor, dim=0)
+        # torch.save(z5_mean_tensor, "checkpoint_cifar10/z5_"+str(isErase)+".pt")
+        
     
     

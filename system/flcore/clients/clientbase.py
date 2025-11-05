@@ -29,12 +29,13 @@ class Client(object):
         self.test_samples = test_samples
         self.train_samples=train_samples
         self.batch_size = args.batch_size
-        self.learning_rate = args.local_learning_rate
+        self.learning_rate = args.local_learning_rate if not attack else args.attacker_learning_rate
         self.local_epochs = args.local_epochs
 
         self.poison_flag=args.poison_flag
         self.attack=attack
         self.weight=0
+        self.poison_start_time=args.poison_start_time
 
         # check BatchNorm
         self.has_BatchNorm = False
@@ -54,16 +55,23 @@ class Client(object):
             optimizer=self.optimizer, 
             gamma=args.learning_rate_decay_gamma
         )
+        # self.learning_rate_scheduler = torch.optim.lr_scheduler.MultiStepLR(
+        #     optimizer=self.optimizer,
+        #     milestones=[30,35,40,45,50],
+        #     gamma=args.learning_rate_decay_gamma
+        # )
         self.learning_rate_decay = not self.attack
+        self.blend=args.blend
+        self.edge=args.edge
 
 
     def load_train_data(self, batch_size=None):
         if batch_size == None:
             batch_size = self.batch_size
         train_data = read_client_data(self.dataset, self.id, is_train=True)
-        if(self.attack):
-            # 我们这里poison_flag 随便选择一个
-            train_data = create_poisoned_dataset(train_data,self.poison_flag,is_train=True)
+        if(self.attack and not self.edge):
+        #     # 我们这里poison_flag 随便选择一个
+            train_data = create_poisoned_dataset(train_data,self.poison_flag,is_train=True,blend=self.blend)
             # pass
             
         return DataLoader(train_data, batch_size, drop_last=True, shuffle=True)
@@ -72,8 +80,8 @@ class Client(object):
         if batch_size == None:
             batch_size = self.batch_size
         test_data = read_client_data(self.dataset, self.id, is_train=False)
-        if(self.attack):
-            test_data = create_poisoned_dataset(test_data,self.poison_flag,is_train=False)
+        if(self.attack and not self.edge):
+            test_data = create_poisoned_dataset(test_data,self.poison_flag,is_train=False,blend=self.blend)
             
         return DataLoader(test_data, batch_size, drop_last=False, shuffle=True)
         

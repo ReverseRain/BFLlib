@@ -38,6 +38,8 @@ class clientChameleon(Client):
                 if self.train_slow:
                     time.sleep(0.1 * np.abs(np.random.rand()))
                 feature = self.model.base(x)
+                feature = torch.flatten(feature, 1)
+                feature = torch.nn.functional.normalize(feature, dim=1)
                 loss = supcon_loss(feature, y,
                                         fac_label=self.poison_flag)
                 self.opt_base.zero_grad()
@@ -74,7 +76,7 @@ class clientChameleon(Client):
 class SupConLoss(torch.nn.Module):
     """Supervised Contrastive Learning: 
     It also supports the unsupervised contrastive loss in SimCLR"""
-    def __init__(self, temperature=5):
+    def __init__(self, temperature=0.07):
         super(SupConLoss, self).__init__()
         self.temperature = temperature
 
@@ -110,7 +112,7 @@ class SupConLoss(torch.nn.Module):
             
             for ind, label in enumerate(labels.view(-1)):
                 if label == fac_label:
-                    mask_scale[ind, :] = mask[ind, :]
+                    mask_scale[ind, :] = mask[ind, :]*2
 
         else:
             mask = mask.float().to(device)
